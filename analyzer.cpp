@@ -5,7 +5,7 @@
 
 // this file walks the parse tree once. it checks names and types and builds
 // the three address code at the same time. every expression returns a place
-// (a variable, literal, or temp) and a type. code lines are saved in a list
+// (a variable, literal, or temp) and a type. quadruples are saved in a list
 // and only printed later if there were no errors.
 
 // one parameter found in a param list, with its id node for error possitions
@@ -177,7 +177,7 @@ void Analyzer::analyze_function(TreeNode* id_node, ValueType return_type,
         report_error(id_node, "redeclaration of '" + entry.name + "' in the same scope");
     }
 
-    emit("func " + entry.unique_name + ":");
+    emit("func", entry.unique_name);
 
     // parameters and the body top level share one scope, so a local name that
     // repeats a parameter is an error. do not open a scope for the body block
@@ -290,10 +290,10 @@ void Analyzer::analyze_stmt(TreeNode* stmt) {
             // if without else: jump past the then block when the condition is false
             std::string end_label = make_label();
             if (condition.type != TYPE_ERROR) {
-                emit("if_false " + condition.place + " goto " + end_label);
+                emit("if_false", condition.place, "_", end_label);
             }
             analyze_block(then_block, true);
-            emit(end_label + ":");
+            emit("label", "_", "_", end_label);
         } else {
             // if with else: false goes to the else block, then the then block
             // jumps over the else block to the end
@@ -301,13 +301,13 @@ void Analyzer::analyze_stmt(TreeNode* stmt) {
             std::string end_label = make_label();
 
             if (condition.type != TYPE_ERROR) {
-                emit("if_false " + condition.place + " goto " + else_label);
+                emit("if_false", condition.place, "_", else_label);
             }
             analyze_block(then_block, true);
-            emit("goto " + end_label);
-            emit(else_label + ":");
+            emit("goto", "_", "_", end_label);
+            emit("label", "_", "_", else_label);
             analyze_block(else_part->children[1], true);
-            emit(end_label + ":");
+            emit("label", "_", "_", end_label);
         }
         return;
     }
@@ -318,14 +318,14 @@ void Analyzer::analyze_stmt(TreeNode* stmt) {
         std::string start_label = make_label();
         std::string end_label = make_label();
 
-        emit(start_label + ":");
+        emit("label", "_", "_", start_label);
         ExprResult condition = analyze_expr(stmt->children[2]);
         if (condition.type != TYPE_ERROR) {
-            emit("if_false " + condition.place + " goto " + end_label);
+            emit("if_false", condition.place, "_", end_label);
         }
         analyze_block(stmt->children[4], true);
-        emit("goto " + start_label);
-        emit(end_label + ":");
+        emit("goto", "_", "_", start_label);
+        emit("label", "_", "_", end_label);
         return;
     }
 
@@ -339,7 +339,7 @@ void Analyzer::analyze_stmt(TreeNode* stmt) {
                              type_name(current_return_type) + "'");
         }
         if (value.type != TYPE_ERROR) {
-            emit("return " + value.place);
+            emit("return", value.place);
         }
         return;
     }
@@ -372,7 +372,7 @@ void Analyzer::analyze_assignment_or_call(TreeNode* id_node, TreeNode* stmt_rest
         }
 
         if (value.type != TYPE_ERROR) {
-            emit(entry->unique_name + " = " + value.place);
+            emit("=", value.place, "_", entry->unique_name);
         }
         return;
     }
@@ -427,14 +427,14 @@ ExprResult Analyzer::analyze_call(TreeNode* id_node, TreeNode* arg_list, bool us
 
     // emit all params left to right, then the call itself
     for (size_t i = 0; i < args.size(); ++i) {
-        emit("param " + args[i].place);
+        emit("param", args[i].place);
     }
 
-    std::string call_text = "call " + entry->unique_name + ", " + std::to_string(args.size());
+    std::string argument_count = std::to_string(args.size());
     if (use_result) {
         // an expression call needs a temp to hold the returned value
         std::string temp = make_temp();
-        emit(temp + " = " + call_text);
+        emit("call", entry->unique_name, argument_count, temp);
 
         ExprResult result;
         result.place = temp;
@@ -442,7 +442,7 @@ ExprResult Analyzer::analyze_call(TreeNode* id_node, TreeNode* arg_list, bool us
         return result;
     }
 
-    emit(call_text);
+    emit("call", entry->unique_name, argument_count);
     return error_result();
 }
 
@@ -602,7 +602,7 @@ ExprResult Analyzer::make_binary(const std::string& op, ExprResult left, ExprRes
     }
 
     std::string temp = make_temp();
-    emit(temp + " = " + left.place + " " + op + " " + right.place);
+    emit(op, left.place, right.place, temp);
 
     ExprResult result;
     result.place = temp;
@@ -617,7 +617,7 @@ ExprResult Analyzer::make_unary(const std::string& op, ExprResult operand) {
     }
 
     std::string temp = make_temp();
-    emit(temp + " = " + op + " " + operand.place);
+    emit(op, operand.place, "_", temp);
 
     ExprResult result;
     result.place = temp;
@@ -644,9 +644,20 @@ std::string Analyzer::make_label() {
     return "L" + std::to_string(label_count);
 }
 
-// add one line to the final tac. nothing is printed until the walk is done
-void Analyzer::emit(const std::string& line) {
-    code.push_back(line);
+// add one quadruple to the final tac. nothing is printed until the walk is done
+void Analyzer::emit(const std::string& op, const std::string& arg1,
+                    const std::string& arg2, const std::string& result) {
+    Quadruple quadruple;
+    quadruple.op = op;
+    quadruple.arg1 = arg1;
+    quadruple.arg2 = arg2;
+    quadruple.result = result;
+    code.push_back(quadruple);
+}
+
+std::string format_quadruple(const Quadruple& quadruple) {
+    return "(" + quadruple.op + ", " + quadruple.arg1 + ", " +
+           quadruple.arg2 + ", " + quadruple.result + ")";
 }
 
 // find the first real token below the node, then use its line and column

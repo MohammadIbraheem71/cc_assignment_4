@@ -12,6 +12,17 @@ struct ExprResult {
     ValueType type;
 };
 
+// one three-address-code instruction: op arg1, arg2 -> result
+struct Quadruple {
+    std::string op;
+    std::string arg1;
+    std::string arg2;
+    std::string result;
+};
+
+// prints a quadruple as (op, arg1, arg2, result)
+std::string format_quadruple(const Quadruple& quadruple);
+
 class Analyzer {
 public:
     explicit Analyzer(TreeNode* root);
@@ -20,7 +31,7 @@ public:
     void analyze();
 
     const std::vector<std::string>& get_errors() const { return errors; }
-    const std::vector<std::string>& get_code() const { return code; }
+    const std::vector<Quadruple>& get_code() const { return code; }
 
 private:
     void collect_function_signatures(TreeNode* program);
@@ -53,13 +64,14 @@ private:
 
     std::string make_temp();
     std::string make_label();
-    void emit(const std::string& line);
+    void emit(const std::string& op, const std::string& arg1 = "_",
+              const std::string& arg2 = "_", const std::string& result = "_");
     void report_error(const TreeNode* node, const std::string& message);
 
     TreeNode* root;
     SymbolTable symbol_table;
     std::vector<std::string> errors;
-    std::vector<std::string> code;
+    std::vector<Quadruple> code;
     std::map<std::string, SymbolEntry> function_signatures;
     int temporary_count;
     int label_count;

@@ -138,8 +138,8 @@ int main() {
         return 1;
     }
 
-    for (const std::string& line : analyzer.get_code()) {
-        std::cout << line << "\n";
+    for (const Quadruple& quadruple : analyzer.get_code()) {
+        std::cout << format_quadruple(quadruple) << "\n";
     }
 
     delete_tree(root);
