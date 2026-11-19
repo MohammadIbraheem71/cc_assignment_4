@@ -1,0 +1,12 @@
+// sample 1: arithmetic and if/else
+int main() {
+    int x;
+    int y;
+    x = 2 + 3 * 4;
+    if (x > 10) {
+        y = x - 1;
+    } else {
+        y = 0;
+    }
+    return y;
+}

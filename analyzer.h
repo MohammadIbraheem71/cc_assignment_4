@@ -23,6 +23,9 @@ struct Quadruple {
 // prints a quadruple as (op, arg1, arg2, result)
 std::string format_quadruple(const Quadruple& quadruple);
 
+// prints a quadruple as a readable three-address statement
+std::string format_statement(const Quadruple& quadruple);
+
 class Analyzer {
 public:
     explicit Analyzer(TreeNode* root);
@@ -32,6 +35,7 @@ public:
 
     const std::vector<std::string>& get_errors() const { return errors; }
     const std::vector<Quadruple>& get_code() const { return code; }
+    const SymbolTable& get_symbol_table() const { return symbol_table; }
 
 private:
     void collect_function_signatures(TreeNode* program);
@@ -76,4 +80,5 @@ private:
     int temporary_count;
     int label_count;
     ValueType current_return_type;
+    std::string current_function;
 };

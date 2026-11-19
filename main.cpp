@@ -5,6 +5,7 @@
 
 #include "analyzer.h"
 #include "grammar.h"
+#include "interpreter.h"
 #include "lexer.h"
 #include "parse_table.h"
 #include "parser.h"
@@ -62,6 +63,12 @@ int main() {
 
     // set this to true to also print the parse tree
     const bool show_parse_tree = true;
+
+    // set this to true to write the three-address code in statement form
+    const bool write_tac = false;
+
+    // set this to true to write the symbol table
+    const bool write_symbol_table = false;
 
     // read the grammar from the file and compute nullable, first and follow
     Grammar grammar;
@@ -138,10 +145,25 @@ int main() {
         return 1;
     }
 
+    if (write_symbol_table) {
+        std::ofstream symbol_file("symbol_table.txt");
+        analyzer.get_symbol_table().write(symbol_file);
+    }
+
+    if (write_tac) {
+        std::ofstream tac_file("tac.txt");
+        for (const Quadruple& quadruple : analyzer.get_code()) {
+            tac_file << format_statement(quadruple) << "\n";
+        }
+    }
+
     for (const Quadruple& quadruple : analyzer.get_code()) {
         std::cout << format_quadruple(quadruple) << "\n";
     }
 
+    Interpreter interpreter(analyzer.get_code(), analyzer.get_symbol_table());
+    int interpreter_status = interpreter.run();
+
     delete_tree(root);
-    return 0;
+    return interpreter_status;
 }

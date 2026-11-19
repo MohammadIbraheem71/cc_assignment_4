@@ -1,5 +1,6 @@
 #pragma once
 #include <map>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,8 @@ struct SymbolEntry {
     ValueType type = TYPE_ERROR;
     std::vector<ValueType> parameter_types;   // only used for functions
     std::string unique_name;
+    std::string owner_function;               // empty for globals and functions
+    int scope_depth = 0;
 };
 
 class SymbolTable {
@@ -43,10 +46,19 @@ public:
     // searches from the innermost scope outward, nullptr if not found
     const SymbolEntry* lookup(const std::string& name) const;
 
+    // every successful declaration, kept even after its scope is popped
+    const std::vector<SymbolEntry>& get_declared_entries() const {
+        return declared_entries;
+    }
+
+    // writes the retained entries as a plain text table
+    void write(std::ostream& out) const;
+
 private:
     // a stack of maps
     // each map represents a scope
     // a scope is popped when it is exited
     std::vector<std::map<std::string, SymbolEntry>> scope_stack;
     std::map<std::string, int> name_counter;
+    std::vector<SymbolEntry> declared_entries;
 };

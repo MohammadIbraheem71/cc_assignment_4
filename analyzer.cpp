@@ -179,6 +179,10 @@ void Analyzer::analyze_function(TreeNode* id_node, ValueType return_type,
 
     emit("func", entry.unique_name);
 
+    // locals and parameters belong to this function's activation record
+    std::string previous_function = current_function;
+    current_function = entry.unique_name;
+
     // parameters and the body top level share one scope, so a local name that
     // repeats a parameter is an error. do not open a scope for the body block
     symbol_table.enter_scope();
@@ -187,6 +191,7 @@ void Analyzer::analyze_function(TreeNode* id_node, ValueType return_type,
         param_entry.name = params[i].name;
         param_entry.kind = SYMBOL_PARAMETER;
         param_entry.type = params[i].type;
+        param_entry.owner_function = current_function;
         if (!symbol_table.declare(param_entry)) {
             report_error(params[i].id_node,
                          "redeclaration of '" + param_entry.name + "' in the same scope");
@@ -200,6 +205,7 @@ void Analyzer::analyze_function(TreeNode* id_node, ValueType return_type,
     current_return_type = previous_return_type;
 
     symbol_table.exit_scope();
+    current_function = previous_function;
     emit("endfunc");
 }
 
@@ -209,6 +215,7 @@ void Analyzer::declare_variable(TreeNode* id_node, ValueType type) {
     entry.name = id_node->lexeme;
     entry.kind = SYMBOL_VARIABLE;
     entry.type = type;
+    entry.owner_function = current_function;
 
     if (!symbol_table.declare(entry)) {
         report_error(id_node, "redeclaration of '" + entry.name + "' in the same scope");
@@ -658,6 +665,30 @@ void Analyzer::emit(const std::string& op, const std::string& arg1,
 std::string format_quadruple(const Quadruple& quadruple) {
     return "(" + quadruple.op + ", " + quadruple.arg1 + ", " +
            quadruple.arg2 + ", " + quadruple.result + ")";
+}
+
+std::string format_statement(const Quadruple& quadruple) {
+    const std::string& op = quadruple.op;
+    const std::string& arg1 = quadruple.arg1;
+    const std::string& arg2 = quadruple.arg2;
+    const std::string& result = quadruple.result;
+
+    if (op == "func") return "func " + arg1 + ":";
+    if (op == "endfunc") return "endfunc";
+    if (op == "label") return result + ":";
+    if (op == "goto") return "goto " + result;
+    if (op == "if_false") return "if_false " + arg1 + " goto " + result;
+    if (op == "=") return result + " = " + arg1;
+    if (op == "param") return "param " + arg1;
+    if (op == "return") return "return " + arg1;
+    if (op == "call") {
+        std::string call_text = "call " + arg1 + ", " + arg2;
+        if (result == "_") return call_text;
+        return result + " = " + call_text;
+    }
+
+    if (arg2 == "_") return result + " = " + op + " " + arg1;
+    return result + " = " + arg1 + " " + op + " " + arg2;
 }
 
 // find the first real token below the node, then use its line and column

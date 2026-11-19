@@ -1,0 +1,19 @@
+// sample 3: while loop, char literal and a call statement
+int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    int i;
+    int total;
+    char letter;
+    i = 0;
+    total = 0;
+    letter = 'a';
+    while (i < 4) {
+        total = total + i;
+        i = i + 1;
+    }
+    add(total, 1);
+    return total;
+}

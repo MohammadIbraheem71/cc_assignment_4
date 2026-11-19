@@ -33,7 +33,9 @@ bool SymbolTable::declare(SymbolEntry& entry) {
         entry.unique_name = entry.name + "_" + std::to_string(count);
     }
 
+    entry.scope_depth = static_cast<int>(scope_stack.size());
     current_scope[entry.name] = entry;
+    declared_entries.push_back(entry);
     return true;
 }
 
@@ -47,4 +49,30 @@ const SymbolEntry* SymbolTable::lookup(const std::string& name) const {
         }
     }
     return nullptr;
+}
+
+static std::string kind_name(SymbolKind kind) {
+    if (kind == SYMBOL_PARAMETER) return "parameter";
+    if (kind == SYMBOL_FUNCTION) return "function";
+    return "variable";
+}
+
+static std::string type_name(ValueType type) {
+    if (type == TYPE_INT) return "int";
+    if (type == TYPE_CHAR) return "char";
+    return "error";
+}
+
+void SymbolTable::write(std::ostream& out) const {
+    out << "scope owner name unique_name kind type params\n";
+    for (const SymbolEntry& entry : declared_entries) {
+        out << entry.scope_depth << " "
+            << (entry.owner_function.empty() ? "-" : entry.owner_function) << " "
+            << entry.name << " " << entry.unique_name << " "
+            << kind_name(entry.kind) << " " << type_name(entry.type);
+        for (ValueType parameter : entry.parameter_types) {
+            out << " " << type_name(parameter);
+        }
+        out << "\n";
+    }
 }
