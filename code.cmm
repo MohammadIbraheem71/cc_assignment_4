@@ -1,32 +1,12 @@
-// this file has semantic errors, but it still parses
-int global_x;
-char global_c;
-
-int add(int a, int b) {
-    return a + b;
-}
-
-char pick() {
-    return 5;
-}
-
-int bad(int p) {
-    int p;
-    return p;
-}
-
+// sample 1: arithmetic and if/else
 int main() {
     int x;
-    int x;
-    char c;
-
-    c = 10;
-    x = unknown + 1;
-    x = add(1);
-    x = add(1, 2, 3);
-    x = pick;
-    x = bad(1);
-
-    global_c = 'a';
-    return global_x();
+    int y;
+    x = 2 + 3 * 4;
+    if (x > 10) {
+        y = x - 1;
+    } else {
+        y = 0;
+    }
+    return y;
 }
